@@ -1,0 +1,278 @@
+# ==========================================
+# CLI Assistant - Secure .gitignore
+# ==========================================
+
+# ============ CRITICAL SECURITY ============
+# Never commit these files - they contain secrets!
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+.envrc
+
+# AWS Credentials (should be in ~/.aws/ but just in case)
+*credentials*
+*aws_access_key*
+*aws_secret*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# API Keys and Tokens
+*_token
+*_key
+*_secret
+api_keys.txt
+secrets.txt
+secrets.json
+secrets.yaml
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# ============ PYTHON ============
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.virtualenv/
+Pipenv.lock
+
+# ============ PROJECT SPECIFIC ============
+# Session data (may contain user inputs)
+sessions/
+session_*.json
+*.session
+
+# Logs (may contain sensitive info)
+logs/
+*.log
+*.log.*
+log_*.txt
+
+# Cost tracking data
+cost_tracking.json
+cost_*.json
+
+# Notes (may contain personal info)
+notes/
+*.note
+personal_notes/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# ============ IDE / EDITOR ============
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.vim
+.vim/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ============ OPERATING SYSTEM ============
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============ AWS / CLOUD ============
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# SAM
+.aws-sam/
+samconfig.toml
+
+# CDK
+cdk.out/
+.cdk.staging/
+
+# ============ SENSITIVE OUTPUTS ============
+# Exports that may contain data
+export_*.md
+export_*.json
+exported_sessions/
+
+# Screenshots (may contain sensitive info)
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Documents that may have been generated
+generated_*.pdf
+report_*.docx
+
+# ============ DEPENDENCIES ============
+# Node modules (if using any JS tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============ TESTING ============
+# Test outputs
+test_*.json
+test_sessions/
+test_logs/
+.pytest_cache/
+
+# ============ BUILD ARTIFACTS ============
+# Compiled code
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+
+# ============ DOCUMENTATION TEMP ============
+# Generated docs
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============ ALLOW THESE ============
+# (Explicitly un-ignore if accidentally caught)
+!.gitignore
+!.pre-commit-config.yaml
+!.github/
+!config/default_config.yaml
+!.env.example
+
+# ============ CUSTOM RULES ============
+# Add project-specific rules below
+
+# Large model files (if downloading models locally)
+models/downloaded/
+*.bin
+*.onnx
+*.pt
+*.safetensors
+
+# Data files
+data/
+datasets/
+*.csv.gz
+*.parquet
+
+strands-cli-developer_*.csv

@@ -1,0 +1,56 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "aws-marketplace:ViewSubscriptions",
+                "bedrock:ListInferenceProfiles",
+                "bedrock:PutUseCaseForModelAccess",
+                "bedrock:GetUseCaseForModelAccess",
+                "bedrock:GetFoundationModelAvailability",
+                "bedrock:ListMarketplaceModelEndpoints",
+                "bedrock:ListFoundationModelAgreementOffers",
+                "aws-marketplace:Subscribe",
+                "bedrock:GetFoundationModel",
+                "bedrock:ListFoundationModels",
+                "bedrock:CreateFoundationModelAgreement",
+                "bedrock:ListAgents",
+                "bedrock:PutFoundationModelEntitlement"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "codecommit:GetCommit",
+                "codecommit:ListBranches",
+                "logs:CreateLogStream",
+                "codecommit:GetRepository",
+                "codecommit:GetBranch",
+                "codecommit:GitPull",
+                "codecommit:CreateCommit",
+                "codecommit:GitPush",
+                "logs:CreateLogGroup",
+                "logs:PutLogEvents",
+                "codecommit:UpdateDefaultBranch"
+            ],
+            "Resource": [
+                "arn:aws:codecommit:us-west-2:*:cli-assistant-strands",
+                "arn:aws:logs:us-west-2:*:log-group:/aws/strands/cli-assistant:*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Deny",
+            "Action": [
+                "iam:*",
+                "organizations:*",
+                "account:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
