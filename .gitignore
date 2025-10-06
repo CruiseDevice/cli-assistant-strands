@@ -192,6 +192,9 @@ $RECYCLE.BIN/
 .nfs*
 
 # ============ AWS / CLOUD ============
+# IAM Policies (contain account-specific info)
+iam_policy.json
+
 # Terraform
 *.tfstate
 *.tfstate.*
@@ -276,3 +279,4 @@ datasets/
 *.parquet
 
 strands-cli-developer_*.csv
+repl_state/
