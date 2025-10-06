@@ -42,13 +42,23 @@ def initialize_agent():
     )
 
     # system prompt with cost awareness
-    system_prompt = """
-    You are a helpful CLI assistant.
+    system_prompt = """You are a helpful CLI assistant with access to tools.
 
-    IMPORTANT: Keep responses concise to minimize costs.
-    - Give direct answers
-    - Avoid unnecessary elaboration unless asked
-    - Use bullet points for lists
+Available tools:
+- calculator: For mathematical operations
+- python_repl: For executing Python code
+- read_file: For reading local files
+
+COST OPTIMIZATION:
+- Use tools only when necessary
+- Keep tool invocations minimal
+- Prefer calculator over python_repl for simple math
+- Be concise in responses
+
+When using tools:
+1. Explain what you're doing
+2. Use the appropriate tool
+3. Interpret results clearly
     """
 
     agent = Agent(
@@ -111,7 +121,7 @@ def main():
     console.print("[green]Agent ready[/green]")
 
     # Help message
-    console.print("[dim]Commands: 'quit' or 'exit' to end, 'cost' for cost summary[/dim]\n")
+    console.print("[dim]Commands: 'quit' or 'exit' to end, 'cost' for cost summary, 'tools' for tool usage[/dim]\n")
 
     # main loop
     while True:
@@ -125,6 +135,8 @@ def main():
             if user_input.lower() in ['quit', 'exit', 'q']:
                 console.print("\n[yellow]Final cost summary:[/yellow]")
                 console.print(cost_tracker.get_summary())
+                console.print("\n[yellow]Tool usage:[/yellow]")
+                console.print(cost_tracker.get_tool_summary())
                 console.print("\n[green]Goodbye![/green]")
                 break
 
@@ -132,11 +144,25 @@ def main():
                 console.print("\n" + cost_tracker.get_summary() + "\n")
                 continue
 
+            if user_input.lower() == 'tools':
+                console.print("\n" + cost_tracker.get_tool_summary() + "\n")
+                continue
+
             # get response from agent
             console.print("[bold green]Assistant:[/bold green] ", end="")
 
             response = agent(user_input)
             response_text = str(response)
+
+            # display response
+            console.print(response_text)
+
+            # track tool usage
+            if hasattr(response, 'tool_calls') and response.tool_calls:
+                for tool_call in response.tool_calls:
+                    tool_name = tool_call.tool_name if hasattr(tool_call, 'tool_name') else str(tool_call)
+                    cost_tracker.track_tool_usage(tool_name)
+                    console.print(f"[dim]Used tool: {tool_name}[/dim]")
 
             # Track costs
             # Note: Estimating tokens - will be more accurate with actual API response
@@ -164,6 +190,8 @@ def main():
             continue
         except Exception as e:
             console.print(f"\n[red]Error: {e}[/red]")
+            import traceback
+            console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
 if __name__ == "__main__":
     main()

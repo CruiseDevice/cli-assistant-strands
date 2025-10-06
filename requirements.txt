@@ -20,3 +20,7 @@ black
 flake8
 
 git-remote-codecommit
+
+sympy
+matplotlib
+requests
