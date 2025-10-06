@@ -32,7 +32,7 @@ class CostTracker:
         if self.storage_file.exists():
             with open(self.storage_file, 'r') as f:
                 return json.load(f)
-        return {'sessions': {}, 'daily': {}, 'monthly': {}}
+        return {'sessions': {}, 'daily': {}, 'monthly': {}, 'tool_usage': {}}
 
     def check_budget(self):
         """Check if we're within budget limits"""
@@ -53,6 +53,17 @@ class CostTracker:
             'monthly_used': monthly_cost,
             'monthly_limit': monthly_limit
         }
+
+    def get_tool_summary(self):
+        """Get tool usage summary."""
+        today = str(date.today())
+        tool_data = self.data.get('tool_usage', {}).get(today, {})
+
+        if not tool_data:
+            return "No tools used today."
+
+        table = [[tool, count] for tool, count in tool_data.items()]
+        return tabulate(table, headers=['Tool', 'Uses'], tablefmt='grid')
 
     def get_summary(self):
         """Get a formatted summary of costs."""
@@ -148,3 +159,19 @@ class CostTracker:
             'daily_cost': self.data['daily'][today]['cost'],
             'monthly_cost': self.data['monthly'][month]['cost']
         }
+
+    def track_tool_usage(self, tool_name, session_id=None):
+        """Track tool invocations."""
+        today = str(date.today())
+
+        if 'tool_usage' not in self.data:
+            self.data['tool_usage'] = {}
+
+        if today not in self.data['tool_usage']:
+            self.data['tool_usage'][today] = {}
+
+        if tool_name not in self.data['tool_usage'][today]:
+            self.data['tool_usage'][today][tool_name] = 0
+
+        self.data['tool_usage'][today][tool_name] += 1
+        self.save_data()
