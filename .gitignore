@@ -279,3 +279,4 @@ datasets/
 *.parquet
 
 strands-cli-developer_*.csv
+repl_state/
