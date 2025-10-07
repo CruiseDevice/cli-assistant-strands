@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from utils.cost_tracker import CostTracker
 from strands import Agent
 from strands.models import BedrockModel
+from strands_tools import calculator, python_repl, file_read
+from tools.custom_tools import get_system_info, save_note
+
 
 # load environment variables
 load_dotenv()
@@ -35,35 +38,50 @@ def check_aws_credentials():
 
 def initialize_agent():
     """Initialize the Strands agent with Bedrock."""
+    # Note: Region is configured via AWS credentials/environment, not as a BedrockModel parameter
     model = BedrockModel(
         model_id="anthropic.claude-3-5-haiku-20241022-v1:0",
-        region=os.getenv('AWS_REGION', 'us-west-2'),
         streaming=False
     )
 
     # system prompt with cost awareness
-    system_prompt = """You are a helpful CLI assistant with access to tools.
+    system_prompt = """You are a helpful CLI assistant with access to various tools.
 
 Available tools:
 - calculator: For mathematical operations
 - python_repl: For executing Python code
 - read_file: For reading local files
+- get_system_info: System metrics (CPU, memory, disk)
+- save_note: Save notes locally
+- list_notes: List all saved notes
+- search web: Search the web (use sparingly)
+- estimate_cost: Estimate costs before operations.
 
-COST OPTIMIZATION:
-- Use tools only when necessary
-- Keep tool invocations minimal
-- Prefer calculator over python_repl for simple math
-- Be concise in responses
+COST OPTIMIZATION RULES:
+1. Use simple responses when possible (no tools)
+2. Use calculator instead of python_repl for basic math
+3. Use estimate_cost before complex operations
+4. Limit search_web usage (adds latency)
+5. Keep responses concise
 
-When using tools:
-1. Explain what you're doing
-2. Use the appropriate tool
-3. Interpret results clearly
+Be helpful, efficient, and cost-conscious!
     """
 
     agent = Agent(
         model=model,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        tools=[
+            # pre-build tools
+            calculator,
+            python_repl,
+            file_read,
+            # custom tools,
+            get_system_info,
+            save_note,
+            # list_note,
+            # search_web,
+            # estimate_cost
+        ]
     )
     return agent
 
