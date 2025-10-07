@@ -174,4 +174,4 @@ class CostTracker:
             self.data['tool_usage'][today][tool_name] = 0
 
         self.data['tool_usage'][today][tool_name] += 1
-        self.save_data()
+        self._save_data()
