@@ -1,4 +1,3 @@
-import os
 import sys
 from rich.console import Console
 from rich.panel import Panel
@@ -7,7 +6,9 @@ from utils.cost_tracker import CostTracker
 from strands import Agent
 from strands.models import BedrockModel
 from strands_tools import calculator, python_repl, file_read
-from tools.custom_tools import get_system_info, save_note
+from tools.custom_tools import get_system_info, save_note, list_notes,\
+    search_web, estimate_cost
+from strands.hooks import HookProvider, HookRegistry, BeforeToolCallEvent
 
 
 # load environment variables
@@ -15,6 +16,27 @@ load_dotenv()
 
 # initialize console for pretty output
 console = Console()
+
+# global cost tracker
+cost_tracker = CostTracker()
+
+
+class ToolTrackingHook(HookProvider):
+    """Hook to track tool usage automatically."""
+    def __init__(self, tracker):
+        self.tracker = tracker
+
+    def register_hooks(self, registry: HookRegistry) -> None:
+        """Register hook for tool calls."""
+        registry.add_callback(BeforeToolCallEvent, self.track_tool_call)
+
+    def track_tool_call(self, event: BeforeToolCallEvent) -> None:
+        """Track each tool call."""
+        tool_use = event.tool_use
+        tool_name = tool_use.get('name', 'unknown')
+        self.tracker.track_tool_usage(tool_name)
+        console.print(f"[dim]Using tool: {tool_name}[/dim]")
+
 
 
 def check_aws_credentials():
@@ -78,10 +100,11 @@ Be helpful, efficient, and cost-conscious!
             # custom tools,
             get_system_info,
             save_note,
-            # list_note,
-            # search_web,
-            # estimate_cost
-        ]
+            list_notes,
+            search_web,
+            estimate_cost
+        ],
+        hooks=[ToolTrackingHook(cost_tracker)]
     )
     return agent
 
@@ -113,8 +136,8 @@ def main():
         console.print("  3. Request access for Claude models")
         sys.exit(1)
 
-    # inititalize cost tracker
-    cost_tracker = CostTracker()
+    # Use the global cost tracker (already initialized at module level)
+    global cost_tracker
 
     # check budget before starting
     budget_status = cost_tracker.check_budget()
@@ -173,14 +196,7 @@ def main():
             response_text = str(response)
 
             # display response
-            console.print(response_text)
-
-            # track tool usage
-            if hasattr(response, 'tool_calls') and response.tool_calls:
-                for tool_call in response.tool_calls:
-                    tool_name = tool_call.tool_name if hasattr(tool_call, 'tool_name') else str(tool_call)
-                    cost_tracker.track_tool_usage(tool_name)
-                    console.print(f"[dim]Used tool: {tool_name}[/dim]")
+            # console.print(response_text)
 
             # Track costs
             # Note: Estimating tokens - will be more accurate with actual API response

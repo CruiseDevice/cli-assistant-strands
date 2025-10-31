@@ -31,7 +31,11 @@ class CostTracker:
         """Load existing tracking data."""
         if self.storage_file.exists():
             with open(self.storage_file, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Ensure tool_usage key exists for backward compatibility
+                if 'tool_usage' not in data:
+                    data['tool_usage'] = {}
+                return data
         return {'sessions': {}, 'daily': {}, 'monthly': {}, 'tool_usage': {}}
 
     def check_budget(self):
