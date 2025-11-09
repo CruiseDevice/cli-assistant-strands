@@ -4,6 +4,7 @@ Model Configuration for Smart CLI Assistant
 Defines model tiers with their specifications, pricing and use case
 """
 from enum import Enum
+from tabulate import tabulate
 
 
 class ModelTier(Enum):
@@ -109,3 +110,31 @@ MODELS = {name: ModelConfig(config) for name, config in _MODELS_DICT.items()}
 
 # Default model to use if none specified
 DEFAULT_MODEL = "haiku"
+
+
+def compare_model_costs(input_tokens: int, output_tokens: int) -> str:
+    """Compare costs across all models for given token counts.
+
+    Args:
+        input_tokens: Number of input tokens
+        output_tokens: Number of output tokens
+
+    Returns:
+        Formatted table string comparing costs across all models
+    """
+    table_data = []
+    for key, model in MODELS.items():
+        input_cost = (input_tokens / 1_000_000) * model.cost_per_1m_input
+        output_cost = (output_tokens / 1_000_000) * model.cost_per_1m_output
+        total_cost = input_cost + output_cost
+        table_data.append([
+            model.name,
+            f"${input_cost:.6f}",
+            f"${output_cost:.6f}",
+            f"${total_cost:.6f}"
+        ])
+    return tabulate(
+        table_data,
+        headers=["Model", "Input Cost", "Output Cost", "Total Cost"],
+        tablefmt="grid"
+    )
