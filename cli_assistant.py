@@ -3,8 +3,9 @@ from re import S
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
-
+from tabulate import tabulate
 from dotenv import load_dotenv
+
 from utils.cost_tracker import CostTracker
 from strands import Agent
 from strands.models import BedrockModel
@@ -13,7 +14,7 @@ from tools.custom_tools import get_system_info, save_note, list_notes,\
     search_web, estimate_cost
 from strands.hooks import HookProvider, HookRegistry, BeforeToolCallEvent
 
-from models.model_config import MODELS
+from models.model_config import MODELS, compare_model_costs
 
 
 # load environment variables
@@ -117,6 +118,58 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
                      f"Cost: ${self.model_config.cost_per_1m_input:.2f} input / "
                      f"${self.model_config.cost_per_1m_output:.2f} output per 1M tokens[/dim]\n")
 
+    def process_message(self, user_input: str):
+        """Process a user message and return response."""
+        console.print("[bold green]Assistant:[/bold green] ", end="")
+
+        try:
+            response = self.agent(user_input)
+            response_text = str(response)
+
+            # Track costs
+            estimated_input_tokens = int(len(user_input.split()) * 1.3)
+            estimated_output_tokens = int(len(response_text.split()) * 1.3)
+
+            cost_info = self.cost_tracker.track_request(
+                model=self.model_name,
+                input_tokens=estimated_input_tokens,
+                output_tokens=estimated_output_tokens
+            )
+
+            # Show cost if significant
+            if cost_info['request_cost'] > 0.01:
+                console.print(f"\n[dim]💰 Cost: ${cost_info['request_cost']:.4f}[/dim]")
+
+            # Warn if approaching limits
+            budget = self.cost_tracker.check_budget()
+            if not budget['daily_ok'] or cost_info['daily_cost'] > budget['daily_limit'] * 0.8:
+                console.print(
+                    f"[yellow]⚠ Daily: ${cost_info['daily_cost']:.4f} / "
+                    f"${budget['daily_limit']:.2f}[/yellow]"
+                )
+
+            console.print()
+
+        except Exception as e:
+            console.print(f"\n[red]Error: {e}[/red]\n")
+            import traceback
+            console.print(f"[dim]{traceback.format_exc()}[/dim]")
+
+    def switch_model(self, model_name: str):
+        """Switch to a different model."""
+        if model_name not in MODELS:
+            console.print(f"[red]Invalid model: {model_name}[/red]")
+            console.print(f"[dim]Available models: {list(MODELS.keys())}[/dim]")
+            return False
+
+        old_model = self.model_config.name
+        self.model_name = model_name
+        self.model_config = MODELS[model_name]
+        self.initialize_agent()
+
+        console.print(f"[green]✓ Switched to {self.model_config.name}[/green]")
+        return True
+
     def handle_command(self, user_input: str) -> bool:
         """
         Handle special commands.
@@ -134,18 +187,55 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
             sys.exit(0)
 
         # cost command
-        if user_input.lower() == 'cost':
+        if cmd == 'cost':
             console.print("\n" + self.cost_tracker.get_summary())
             console.print("\n" + self.cost_tracker.get_tool_summary())
             return True
 
-        if user_input.lower() == 'tools':
+        if cmd == 'tools':
             console.print("\n" + cost_tracker.get_tool_summary() + "\n")
             return True
 
         # TODO: Budget command
+        if cmd == 'budeget':
+            budget = self.cost_tracker.check_budget()
+            table_data = [
+                ["Daily", f"${budget['daily_used']:.4f}",
+                 f"${budget['daily_limit']:.2f}",
+                 "✓" if budget['daily_ok'] else "✗"],
+                ["Monthly", f"${budget['monthly_used']:.4f}",
+                 f"${budget['monthly_limit']:.2f}",
+                 "✓" if budget['monthly_ok'] else "✗"]
+            ]
+            console.print("\n" + tabulate(
+                table_data,
+                headers=["Period", "Used", "Limit", "Status"],
+                tablefmt="grid"
+            ))
+            console.print()
+            return True
+
         # TODO: Model Switching
+        if cmd.startswith('model '):
+            model_name = cmd.split(' ', 1)[1].strip()
+            self.switch_model(model_name)
+            return True
+
         # TODO: Model Comparison
+        if cmd == 'models':
+            console.print("\n[bold]Available Models:[/bold]")
+            for key, model in MODELS.items():
+                current = "← CURRENT" if key == self.model_name else ""
+                console.print(f"\n[cyan]{key}[/cyan] - {model.name} {current}")
+                console.print(f"  {model.description}")
+                console.print(f"  Cost: ${model.cost_per_1m_input:.2f} in / "
+                            f"${model.cost_per_1m_output:.2f} out per 1M tokens")
+
+            # Show cost comparison
+            console.print("\n[bold]Cost Comparison (100 input / 200 output tokens):[/bold]")
+            console.print(compare_model_costs(100, 200))
+            console.print()
+            return True
 
         # help command
         if cmd == 'help':
@@ -289,7 +379,6 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
                 # handle commands
                 if self.handle_command(user_input):
                     continue
-
 
                 # process regular message
                 self.process_message(user_input)
