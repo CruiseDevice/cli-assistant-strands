@@ -1,0 +1,112 @@
+# Default configuration for CLI Assistant
+
+# Application Settings
+app:
+  name: "Smart CLI Assistant"
+  version: "1.0.0"
+  environment: "development"  # development, staging, production
+
+# Model Configuration
+models:
+  default: "haiku"  # haiku, sonnet, opus
+  streaming_enabled: true
+
+  # Model-specific settings
+  haiku:
+    max_tokens: 8192
+    temperature: 0.7
+
+  sonnet:
+    max_tokens: 8192
+    temperature: 0.7
+
+  opus:
+    max_tokens: 8192
+    temperature: 0.7
+
+# AWS Configuration
+aws:
+  region: "us-west-2"
+  bedrock:
+    retry_attempts: 3
+    retry_delay: 1.0  # seconds
+    timeout: 30  # seconds
+
+# Cost Management
+cost:
+  daily_limit: 1.00
+  monthly_limit: 10.00
+  alert_thresholds:
+    - 0.50  # 50%
+    - 0.80  # 80%
+    - 0.95  # 95%
+
+  # Auto-stop when budget exceeded
+  stop_on_budget_exceeded: true
+
+# Session Management
+sessions:
+  storage_dir: "sessions"
+  max_context_tokens: 4000
+  max_messages_in_context: 20
+  auto_save: true
+
+  # Retention policy (days)
+  retention_days: 30
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_dir: "logs"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+
+  # Log to console
+  console_logging: false
+
+  # Performance monitoring
+  track_performance: true
+
+# Tools Configuration
+tools:
+  # Web search settings
+  web_search:
+    enabled: true
+    max_results: 3
+    timeout: 5
+
+  # Python REPL settings
+  python_repl:
+    enabled: true
+    timeout: 10
+
+  # System info settings
+  system_info:
+    enabled: true
+    interval: 1  # seconds for CPU measurement
+
+# Security
+security:
+  # Validate inputs
+  input_validation: true
+  max_input_length: 10000  # characters
+
+  # Sanitize file operations
+  file_operations:
+    allowed_extensions: [".txt", ".md", ".json", ".csv", ".py"]
+    max_file_size: 5242880  # 5MB
+
+  # Rate limiting (requests per minute)
+  rate_limit: 60
+
+# UI Settings
+ui:
+  color_output: true
+  show_cost_warnings: true
+  show_tool_usage: true
+
+  # Progress indicators
+  show_loading: true
+
+  # Command history
+  history_size: 100
