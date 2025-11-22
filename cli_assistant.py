@@ -1,5 +1,6 @@
 import sys
 from re import S
+from typing import Optional
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -7,6 +8,7 @@ from tabulate import tabulate
 from dotenv import load_dotenv
 
 from utils.cost_tracker import CostTracker
+from utils.session_manager import SessionManager
 from strands import Agent
 from strands.models import BedrockModel
 from strands_tools import calculator, python_repl, file_read
@@ -65,14 +67,29 @@ def check_aws_credentials():
 
 class SmartCLIAssistant:
     """
-    Enhanced CLI Assistant with multi-model support for streaming
+    Enhanced CLI Assistant with multi-model support and session management
     """
-    def __init__(self, model_name: str = "haiku"):
+    def __init__(self, model_name: str = "haiku", session_id: Optional[str] = None):
         self.model_name = model_name
         self.model_config = MODELS[model_name]
         self.cost_tracker = cost_tracker
+        self.session_manager = SessionManager()
         self.agent = None
         self.streaming_enabled = False  # Disabled for now, can be enabled later
+
+        # Load or create session
+        if session_id:
+            session = self.session_manager.load_session(session_id)
+            if session:
+                console.print(f"[green]✓ Loaded session: {session_id[:16]}...[/green]")
+                console.print(f"  Messages: {session.message_count}")
+                console.print(f"  Cost so far: ${session.total_cost:.4f}\n")
+            else:
+                console.print(f"[yellow]Session not found. Creating new session.[/yellow]\n")
+                self.session_manager.create_session(model_name)
+        else:
+            self.session_manager.create_session(model_name)
+            console.print(f"[green]✓ New session created[/green]\n")
 
     def initialize_agent(self):
         """Initialize agent with current model."""
@@ -120,6 +137,9 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
 
     def process_message(self, user_input: str):
         """Process a user message and return response."""
+        # Add user message to session
+        self.session_manager.add_message('user', user_input)
+
         console.print("[bold green]Assistant:[/bold green] ", end="")
 
         try:
@@ -134,6 +154,14 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
                 model=self.model_name,
                 input_tokens=estimated_input_tokens,
                 output_tokens=estimated_output_tokens
+            )
+
+            # Add assistant message to session
+            self.session_manager.add_message(
+                'assistant',
+                response_text,
+                tokens=estimated_output_tokens,
+                cost=cost_info.get('request_cost')
             )
 
             # Show cost if significant
@@ -242,48 +270,79 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
             self.show_help()
             return True
 
-        return False
+        # Session commands
+        if cmd == 'sessions':
+            sessions = self.session_manager.list_sessions()
+            if not sessions:
+                console.print("[yellow]No saved sessions[/yellow]")
+                return True
 
-    def process_message(self, user_input: str):
-        """Process a user message and return response."""
-        console.print("[bold green]Assistant:[/bold green] ", end="")
+            table_data = [
+                [s['session_id'][:16] + '...', s['model'],
+                 s['message_count'], f"${s['total_cost']:.4f}",
+                 s['updated_at']]
+                for s in sessions[:10]  # Show last 10
+            ]
 
-        try:
-            response = self.agent(user_input)
-            response_text = str(response)
-
-            # display response
-            # console.print(response_text)
-
-            # Track costs
-            # Note: Estimating tokens - will be more accurate with actual API response
-            estimated_input_tokens = len(user_input.split()) * 1.3
-            estimated_output_tokens = len(response_text.split()) * 1.3
-
-            cost_info = self.cost_tracker.track_request(
-                model='claude-3.5-haiku',
-                input_tokens=int(estimated_input_tokens),
-                output_tokens=int(estimated_output_tokens)
-            )
-
-            # show request cost if significant
-            if cost_info['request_cost'] > 0.01:
-                console.print(f"\n[dim]Request cost: ${cost_info['request_cost']}[/dim]")
-
-            # warn if approaching daily limit
-            budget = self.cost_tracker.check_budget()
-            if not budget['daily_ok'] or cost_info['daily_cost'] > budget['daily_limit'] * 0.8:
-                    console.print(
-                        f"[yellow]⚠ Daily: ${cost_info['daily_cost']:.4f} / "
-                        f"${budget['daily_limit']:.2f}[/yellow]"
-                    )
-
+            console.print("\n" + tabulate(
+                table_data,
+                headers=["Session ID", "Model", "Messages", "Cost", "Last Updated"],
+                tablefmt="grid"
+            ))
             console.print()
-        except Exception as e:
-            console.print(f"\n[red]Error: {e}[/red]\n")
-            import traceback
-            console.print(f"[dim]{traceback.format_exc()}[/dim]")
+            return True
 
+        if cmd.startswith('load '):
+            session_id = cmd.split(' ', 1)[1].strip()
+            session = self.session_manager.load_session(session_id)
+            if session:
+                console.print(f"[green]✓ Loaded session[/green]")
+                console.print(self.session_manager.get_session_summary())
+            else:
+                console.print(f"[red]Session not found: {session_id}[/red]")
+            return True
+
+        if cmd == 'session':
+            console.print(self.session_manager.get_session_summary())
+            return True
+
+        if cmd.startswith('export '):
+            parts = cmd.split()
+            session_id = parts[1] if len(parts) > 1 else self.session_manager.current_session.session_id
+            format_type = parts[2] if len(parts) > 2 else 'markdown'
+
+            exported = self.session_manager.export_session(session_id, format_type)
+
+            # Save to file
+            filename = f"export_{session_id[:8]}.{format_type if format_type == 'json' else 'md'}"
+            with open(filename, 'w') as f:
+                f.write(exported)
+
+            console.print(f"[green]✓ Exported to {filename}[/green]")
+            return True
+
+        if cmd.startswith('search '):
+            query = cmd.split(' ', 1)[1].strip()
+            results = self.session_manager.search_sessions(query)
+
+            if not results:
+                console.print("[yellow]No matches found[/yellow]")
+                return True
+
+            console.print(f"\n[bold]Found {len(results)} session(s):[/bold]\n")
+            for result in results:
+                console.print(f"[cyan]{result['session_id'][:16]}...[/cyan]")
+                for match in result['matches']:
+                    console.print(f"  → {match}")
+                console.print()
+            return True
+
+        if cmd == 'clear':
+            self.session_manager.create_session(self.model_name)
+            console.print("[green]✓ New session started[/green]")
+            return True
+
+        return False
 
     def show_help(self):
         """Display help information."""
@@ -296,6 +355,14 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
 - `budget` - Show budget status
 - `tools` - List tool usage
 - `help` - Show this help
+
+**Session Commands:**
+- `sessions` - List all saved sessions
+- `session` - Show current session info
+- `load <id>` - Load a previous session
+- `export <id> [format]` - Export session (markdown/json)
+- `search <query>` - Search sessions by content
+- `clear` - Start a new session
 
 **Model Tiers:**
 - **haiku** - Cheap, fast (testing & simple tasks)
@@ -420,10 +487,16 @@ Model Tiers:
         help='Model to use (default; haiku)'
     )
 
+    parser.add_argument(
+        '--session',
+        type=str,
+        help='Load existing session ID'
+    )
+
     args = parser.parse_args()
 
     # create and run assistant
-    assistant = SmartCLIAssistant(model_name=args.model)
+    assistant = SmartCLIAssistant(model_name=args.model, session_id=args.session)
     assistant.run()
 
 
