@@ -459,6 +459,24 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
                 console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
 
+def initialize_agent(model_name: str = "haiku", session_id: Optional[str] = None):
+    """
+    Initialize and return an agent instance.
+
+    This is a convenience function for testing and programmatic use.
+
+    Args:
+        model_name: Model to use ('haiku', 'sonnet', or 'opus')
+        session_id: Optional session ID to load
+
+    Returns:
+        Agent instance ready to use
+    """
+    assistant = SmartCLIAssistant(model_name=model_name, session_id=session_id)
+    assistant.initialize_agent()
+    return assistant.agent
+
+
 def main():
 
     # entry poiny with command-line parsing"
