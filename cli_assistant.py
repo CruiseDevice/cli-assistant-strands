@@ -52,7 +52,7 @@ def check_aws_credentials():
         import boto3
         sts = boto3.client('sts')
         identity = sts.get_caller_identity()
-        console.print(f"[green]AWS Credentials valud[/green]")
+        console.print(f"[green]AWS Credentials valid[/green]")
         console.print(f"    Account: {identity['Account']}")
         console.print(f"    User: {identity['Arn'].split('/')[-1]}")
         return True
@@ -224,8 +224,7 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
             console.print("\n" + cost_tracker.get_tool_summary() + "\n")
             return True
 
-        # TODO: Budget command
-        if cmd == 'budeget':
+        if cmd == 'budget':
             budget = self.cost_tracker.check_budget()
             table_data = [
                 ["Daily", f"${budget['daily_used']:.4f}",
@@ -308,7 +307,15 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
 
         if cmd.startswith('export '):
             parts = cmd.split()
-            session_id = parts[1] if len(parts) > 1 else self.session_manager.current_session.session_id
+            session_id = (parts[1] if len(parts) > 1
+                         else (self.session_manager.current_session.session_id
+                               if self.session_manager.current_session
+                               else None))
+
+            if not session_id:
+                console.print("[yellow]No session specified and no active session[/yellow]")
+                return True
+
             format_type = parts[2] if len(parts) > 2 else 'markdown'
 
             exported = self.session_manager.export_session(session_id, format_type)

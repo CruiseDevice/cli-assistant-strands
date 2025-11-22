@@ -17,7 +17,7 @@ opentelemetry-instrumentation
 
 python-dotenv
 click
-rick
+rich
 
 tabulate
 
