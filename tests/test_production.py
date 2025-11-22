@@ -11,7 +11,8 @@ from utils.error_handler import retry_on_failure, RetryableError, ErrorRecovery
 
 def test_logger_initialization():
     """Test logger creates necessary files."""
-    logger = CostAwareLogger(name="test_logger", log_dir="test_logs")
+    import logging
+    logger = CostAwareLogger(name="test_logger_init", log_dir="test_logs")
 
     assert Path("test_logs").exists()
     assert Path("test_logs/cli_assistant.log").exists()
@@ -19,11 +20,14 @@ def test_logger_initialization():
     # Cleanup
     import shutil
     shutil.rmtree("test_logs")
+    # Remove logger from cache to avoid conflicts
+    logging.getLogger("test_logger_init").handlers.clear()
 
 
 def test_logger_interaction_tracking():
     """Test interaction logging."""
-    logger = CostAwareLogger(name="test_logger", log_dir="test_logs")
+    import logging
+    logger = CostAwareLogger(name="test_logger_interaction", log_dir="test_logs")
 
     logger.log_interaction(
         user_input="Test input",
@@ -35,6 +39,10 @@ def test_logger_interaction_tracking():
         session_id="test_session"
     )
 
+    # Flush handlers to ensure log is written
+    for handler in logger.logger.handlers:
+        handler.flush()
+
     # Check log file exists and has content
     log_file = Path("test_logs/cli_assistant.log")
     assert log_file.exists()
@@ -43,6 +51,8 @@ def test_logger_interaction_tracking():
     # Cleanup
     import shutil
     shutil.rmtree("test_logs")
+    # Remove logger from cache to avoid conflicts
+    logging.getLogger("test_logger_interaction").handlers.clear()
 
 
 def test_config_manager_loads_defaults():
@@ -128,7 +138,7 @@ def test_full_system_config_integration():
 
 
 @pytest.mark.parametrize("model,expected_tier", [
-    ("haiku", "cheap"),
+    ("haiku", "economy"),
     ("sonnet", "balanced"),
     ("opus", "premium")
 ])

@@ -47,7 +47,8 @@ def test_cost_tracking_through_session():
     # Cleanup
     import shutil
     import os
-    os.remove('test_cost.json')
+    if os.path.exists('test_cost.json'):
+        os.remove('test_cost.json')
     shutil.rmtree('test_sessions')
 
 
