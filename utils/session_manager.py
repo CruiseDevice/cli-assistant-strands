@@ -287,7 +287,7 @@ class SessionManager:
         from tabulate import tabulate
 
         data = [
-            ["Session ID", self.current_session.session_id[:16] + "..."],
+            ["Session ID", self.current_session.session_id],
             ["Model", self.current_session.model],
             ["Messages", self.current_session.message_count],
             ["Total Cost", f"${self.current_session.total_cost:.4f}"],

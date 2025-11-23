@@ -278,7 +278,7 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
                 return True
 
             table_data = [
-                [s['session_id'][:16] + '...', s['model'],
+                [s['session_id'], s['model'],
                  s['message_count'], f"${s['total_cost']:.4f}",
                  s['updated_at']]
                 for s in sessions[:10]  # Show last 10
