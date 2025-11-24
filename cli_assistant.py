@@ -271,6 +271,18 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
             return True
 
         # Session commands
+        if cmd == 'resume':
+            session_id = self.session_manager.interactive_resume()
+            if session_id:
+                session = self.session_manager.load_session(session_id)
+                if session:
+                    console.print(f"\n[green]✓ Resumed session[/green]")
+                    console.print(self.session_manager.get_session_summary())
+                    console.print("\n[dim]You can now continue the conversation...[/dim]\n")
+                else:
+                    console.print(f"[red]Failed to load session[/red]")
+            return True
+
         if cmd == 'sessions':
             sessions = self.session_manager.list_sessions()
             if not sessions:
@@ -357,6 +369,7 @@ Current model cost: ${self.model_config.cost_per_1m_input:.2f} input / ${self.mo
 - `help` - Show this help
 
 **Session Commands:**
+- `resume` - Interactive session selection (like Claude's /resume)
 - `sessions` - List all saved sessions
 - `session` - Show current session info
 - `load <id>` - Load a previous session

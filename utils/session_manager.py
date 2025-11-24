@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from dataclasses import dataclass, asdict
 import hashlib
+from rich.console import Console
+from rich.table import Table
+from rich.prompt import Prompt
 
 
 @dataclass
@@ -278,6 +281,116 @@ class SessionManager:
                 continue
 
         return results
+
+    def get_session_preview(self, session_id: str, max_messages: int = 3) -> str:
+        """Get a preview of session messages."""
+        session_file = self.storage_dir / f"{session_id}.json"
+
+        if not session_file.exists():
+            return "Session not found"
+
+        with open(session_file, 'r') as f:
+            data = json.load(f)
+
+        messages = data.get('messages', [])
+        preview_messages = messages[:max_messages]
+
+        preview = []
+        for msg in preview_messages:
+            role = msg['role']
+            content = msg['content'][:80] + ('...' if len(msg['content']) > 80 else '')
+            preview.append(f"  {role}: {content}")
+
+        if len(messages) > max_messages:
+            preview.append(f"  ... and {len(messages) - max_messages} more messages")
+
+        return '\n'.join(preview)
+
+    def interactive_resume(self) -> Optional[str]:
+        """
+        Display interactive session selection similar to Claude's /resume command.
+        Returns selected session_id or None if cancelled.
+        """
+        console = Console()
+        sessions = self.list_sessions()
+
+        if not sessions:
+            console.print("[yellow]No saved sessions found[/yellow]")
+            return None
+
+        # Display sessions table
+        table = Table(title="📝 Previous Chat Sessions", show_header=True, header_style="bold cyan")
+        table.add_column("#", style="dim", width=3)
+        table.add_column("Session ID", style="cyan", width=20)
+        table.add_column("Model", style="green", width=12)
+        table.add_column("Messages", justify="right", style="yellow")
+        table.add_column("Cost", justify="right", style="magenta")
+        table.add_column("Last Updated", style="blue")
+        table.add_column("Preview", style="dim", width=50)
+
+        # Show last 15 sessions
+        display_sessions = sessions[:15]
+
+        for idx, session in enumerate(display_sessions, 1):
+            session_id = session['session_id']
+            short_id = session_id[:16] + '...'
+
+            # Get preview of first messages
+            preview = self.get_session_preview(session_id, max_messages=2)
+            preview_single_line = preview.replace('\n', ' | ')[:50]
+
+            # Format datetime
+            try:
+                dt = datetime.fromisoformat(session['updated_at'])
+                time_str = dt.strftime('%Y-%m-%d %H:%M')
+            except:
+                time_str = session['updated_at'][:16]
+
+            table.add_row(
+                str(idx),
+                short_id,
+                session['model'],
+                str(session['message_count']),
+                f"${session['total_cost']:.4f}",
+                time_str,
+                preview_single_line
+            )
+
+        console.print("\n")
+        console.print(table)
+        console.print("\n")
+
+        if len(sessions) > 15:
+            console.print(f"[dim]Showing 15 of {len(sessions)} sessions[/dim]\n")
+
+        # Prompt for selection
+        console.print("[cyan]Select a session to resume:[/cyan]")
+        console.print("[dim]Enter session number (1-{}) or 'q' to cancel[/dim]".format(len(display_sessions)))
+
+        try:
+            choice = Prompt.ask("Choice", default="q")
+
+            if choice.lower() == 'q':
+                console.print("[yellow]Cancelled[/yellow]")
+                return None
+
+            # Try to parse as number
+            try:
+                session_idx = int(choice) - 1
+                if 0 <= session_idx < len(display_sessions):
+                    selected_session = display_sessions[session_idx]
+                    console.print(f"\n[green]✓ Selected session: {selected_session['session_id'][:16]}...[/green]")
+                    return selected_session['session_id']
+                else:
+                    console.print("[red]Invalid selection[/red]")
+                    return None
+            except ValueError:
+                console.print("[red]Invalid input[/red]")
+                return None
+
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Cancelled[/yellow]")
+            return None
 
     def get_session_summary(self) -> str:
         """Get summary of current session."""
